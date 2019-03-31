@@ -10,10 +10,11 @@
 #include <iostream>
 #include <string>
 
-Object3D::Object3D(char * filename)
+Object3D::Object3D(const std::string & filename)
 {
-  FILE *f = fopen(filename, "r");
+  FILE *f = fopen(filename.c_str(), "r");
   char lstr[1024];
+  ParseError_t err;
 
   PState = psWaitKeyStart;
   Level.push_back(plRoot);
@@ -21,9 +22,30 @@ Object3D::Object3D(char * filename)
   while (!feof(f))
   {
     if (fgets(lstr, sizeof(lstr), f))
-      if (ProcessLine(lstr))
+      if ((err = ProcessLine(lstr)))
       {
-        std::cout << "Error parse in: " << lstr << std::endl;
+        std::cout << "Error: ";
+        switch (err)
+        {
+        case peInvalidChar:
+          std::cout << "Invalid char";
+          break;
+        case peInvalidLevel:
+          std::cout << "Invlaid level";
+          break;
+        case peInvalidNode:
+          std::cout << "Invalid node";
+          break;
+        case peUnknownNode:
+          std::cout << "Unknown node";
+          break;
+        case peUnknownState:
+          std::cout << "Unknown state";
+          break;
+        default:
+          break;
+        }
+        std::cout << std::endl << "Parse stopped in: " << lstr << std::endl;
         break;
       }
   }
@@ -33,8 +55,9 @@ Object3D::Object3D(char * filename)
 Object3D::ParseError_t Object3D::ProcessLine(char* str)
 {
   ParseError_t lres = peOk;
-  char c;
   std::map <std::string, DictStates_t>::const_iterator it;
+  int index;
+  char c;
 
   c = *str++;
   while (c && (lres == peOk))
@@ -50,7 +73,7 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
       else if (c == '*')
       {
         PState = psGetKeyName;
-        KeyName = "";
+        NodeName = "";
       }
       else if (c == '}')
       {
@@ -72,12 +95,12 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         PState = psValidateKey;
         continue;
       }
-      KeyName += c;
+      NodeName += c;
       break;
 
     case psValidateKey:
-      std::cout << "Found a \"" << KeyName << "\"" << std::endl;
-      it = NodesDict.find(KeyName);
+      std::cout << "Found a \"" << NodeName << "\"" << std::endl;
+      it = NodesDict.find(NodeName);
       if (it != NodesDict.end())
       {
         Node = it->second.Node;
@@ -85,64 +108,23 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         Value = "";
       }
       else
-        lres = peUnknownKey;
+        lres = peUnknownNode;
       continue;
     case ps_Num:
       if (Value.length() && ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n')))
       {
         std::cout << "Value: " << Value << std::endl;
-        switch (Level.back())
-        {
-        case plRoot:
-          switch (Node)
-          {
-          case knExportVer:
-            PState = psWaitKeyStart;
-            continue;
-          default:
-            std::cout << "Invalid Node: " << Node << std::endl;
-            lres = peInvalidNode;
-            continue;
-          }
-          break;
-        case plScene:
-          switch (Node)
-          {
-          case knSceneFirstFrame:
-            Scene->FirstFrame = std::stoi(Value);
-            break;
-          case knSceneLastFrame:
-            Scene->LastFrame = std::stoi(Value);
-            break;
-          case knSceneFrameSpeed:
-            Scene->FrameSpeed = std::stoi(Value);
-            break;
-          case knSceneTicksPerFrame:
-            Scene->TicksPerFrame = std::stoi(Value);
-            break;
-          default:
-            std::cout << "Invalid Node: " << Node << std::endl;
-            lres = peInvalidNode;
-            continue;
-          }
-          if (lres == peOk)
-          {
-            PState = psWaitKeyStart;
-            continue;
-          }
-          break;
-        default:
-          std::cout << "Invalid level: " << Level.back() << std::endl;
-          lres = peInvalidLevel;
-          continue;
-        }
+        index = 0;
+        lres = OnSetNum(std::stoi(Value), index, Node, Level.back());
         Value = "";
+        PState = psWaitKeyStart;
       }
       else if ((c != ' ') && (c != '\t'))
       {
         Value += c;
       }
       break;
+
     case ps_Str:
       if (!Value.length())
       {
@@ -158,36 +140,7 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         // End of string
         Value.erase(0, 1);
         std::cout << "Value (str): " << Value << std::endl;
-        switch (Level.back())
-        {
-        case plRoot:
-          switch (Node)
-          {
-          case knComment:
-            break;
-          default:
-            std::cout << "Invalid Node: " << Node << std::endl;
-            lres = peInvalidNode;
-            continue;
-          }
-          break;
-        case plScene:
-          switch (Node)
-          {
-          case knSceneFileName:
-            Scene->FileName = Value;
-            break;
-          default:
-            std::cout << "Invalid Node: " << Node << std::endl;
-            lres = peInvalidNode;
-            continue;
-          }
-          break;
-        default:
-          std::cout << "Invalid level: " << Level.back() << std::endl;
-          lres = peInvalidLevel;
-          continue;
-        }
+        lres = OnSetStr(Value, 0, Node, Level.back());
         Value = "";
         PState = psWaitKeyStart;
       }
@@ -208,12 +161,12 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         case knScene:
           Level.push_back(plScene);
           PState = psWaitKeyStart;
-          Scene = new Scene_t;
+          Scene = new Scene_t();
           break;
         case knMaterialList:
           Level.push_back(plMaterialList);
           PState = psWaitKeyStart;
-          // Create list or map materials?
+          MaterialList = new MaterialList_t();
           break;
         default:
           lres = peInvalidNode;
@@ -221,62 +174,80 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         }
       }
       break;
+
+    case ps_SubClassId:
+      if (Value.length() && ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n') || (c == '{')))
+      {
+        if (c == '{')
+        {
+          std::cout << "Value: " << Value << std::endl;
+          switch(Node)
+          {
+          case knMaterial:
+            Level.push_back(plMaterial);
+            break;
+          default:
+            lres = peInvalidNode;
+            break;
+          }
+          if (lres == peOk)
+            lres = OnSetSubClassID(std::stoi(Value), Node, Level.back());
+
+          Value = "";
+          PState = psWaitKeyStart;
+        }
+      }
+      else if ((c != ' ') && (c != '\t'))
+      {
+        Value += c;
+      }
+      break;
+
+
     case ps_Float:
     case ps_Float2:
     case ps_Float3:
       if (Value.length() && ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n')))
       {
         std::cout << "Value (float" << PState << "): " << Value << std::endl;
+
+        index = 0;
         switch (Level.back())
         {
         case plScene:
+        case plMaterial:
           switch (Node)
           {
           case knSceneBkgStatic:
-            switch (PState)
-            {
-            case ps_Float:
-              Scene->BkgStatic.B = std::stof(Value);
-              PState = psWaitKeyStart;
-              break;
-            case ps_Float2:
-              Scene->BkgStatic.G = std::stof(Value);
-              PState = ps_Float;
-              break;
-            case ps_Float3:
-              Scene->BkgStatic.R = std::stof(Value);
-              PState = ps_Float2;
-              break;
-            }
-            break;
           case knSceneAmbientStatic:
+          case knMaterialAmbient:
             switch (PState)
             {
-            case ps_Float:
-              Scene->AmbientStatic.B = std::stof(Value);
-              PState = psWaitKeyStart;
+            case ps_Float3:
+              index = 0;
+              PState = ps_Float2;
               break;
             case ps_Float2:
-              Scene->AmbientStatic.G = std::stof(Value);
+              index = 1;
               PState = ps_Float;
               break;
-            case ps_Float3:
-              Scene->AmbientStatic.R = std::stof(Value);
-              PState = ps_Float2;
+            case ps_Float:
+              index = 2;
+              PState = psWaitKeyStart;
+              break;
+            default:
               break;
             }
             break;
           default:
-            std::cout << "Invalid Node: " << Node << std::endl;
-            lres = peInvalidNode;
-            continue;
+            break;
           }
           break;
         default:
-          std::cout << "Invalid level: " << Level.back() << std::endl;
-          lres = peInvalidLevel;
-          continue;
+          break;
         }
+
+        lres = OnSetFloat(std::stof(Value), index, Node, Level.back());
         Value = "";
       }
       else if ((c != ' ') && (c != '\t'))
@@ -295,6 +266,206 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
   }
 
   return lres;
+}
+
+Object3D::ParseError_t Object3D::OnSetNum(int value, int index, KeyNodes_t node, ParseLevel_t level)
+{
+  ParseError_t err = peOk;
+  switch (level)
+  {
+  case plRoot:
+    switch (node)
+    {
+    case knExportVer:
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plScene:
+    switch (Node)
+    {
+    case knSceneFirstFrame:
+      Scene->FirstFrame = value;
+      break;
+    case knSceneLastFrame:
+      Scene->LastFrame = value;
+      break;
+    case knSceneFrameSpeed:
+      Scene->FrameSpeed = value;
+      break;
+    case knSceneTicksPerFrame:
+      Scene->TicksPerFrame = value;
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plMaterialList:
+    switch (Node)
+    {
+    case knMaterialCount:
+      MaterialList->Count = value;
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  default:
+    err = peInvalidLevel;
+    break;
+  }
+
+  return err;
+}
+
+Object3D::ParseError_t Object3D::OnSetStr(const std::string value, int index, KeyNodes_t node, ParseLevel_t level)
+{
+  ParseError_t err = peOk;
+
+  switch (level)
+  {
+  case plRoot:
+    switch (Node)
+    {
+    case knComment:
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plScene:
+    switch (Node)
+    {
+    case knSceneFileName:
+      Scene->FileName = value;
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plMaterial:
+    switch (node)
+    {
+    case knMaterialName:
+      MaterialList->Material.back().second->Name = Value;
+      break;
+    case knMaterialClass:
+      MaterialList->Material.back().second->Class = Value;
+      break;
+    default:
+      err = peUnknownNode;
+      break;
+    }
+    break;
+  default:
+    err = peInvalidLevel;
+    break;
+  }
+
+  return err;
+}
+
+Object3D::ParseError_t Object3D::OnSetFloat(float value, int index, KeyNodes_t node, ParseLevel_t level)
+{
+  ParseError_t err = peOk;
+
+  switch (level)
+  {
+  case plScene:
+    switch (node)
+    {
+    case knSceneBkgStatic:
+      switch (index)
+      {
+      case 0:
+        Scene->BkgStatic.B = value;
+        break;
+      case 1:
+        Scene->BkgStatic.G = value;
+        break;
+      case 2:
+        Scene->BkgStatic.R = value;
+        break;
+      }
+      break;
+    case knSceneAmbientStatic:
+      switch (index)
+      {
+      case 0:
+        Scene->AmbientStatic.B = value;
+        break;
+      case 1:
+        Scene->AmbientStatic.G = value;
+        break;
+      case 2:
+        Scene->AmbientStatic.R = value;
+        break;
+      }
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plMaterial:
+    switch (node)
+    {
+    case knMaterialAmbient:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->Ambient.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->Ambient.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->Ambient.R = value;
+        break;
+      }
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  default:
+    err = peInvalidLevel;
+    break;
+  }
+
+  return err;
+}
+
+Object3D::ParseError_t Object3D::OnSetSubClassID(int value, KeyNodes_t node, ParseLevel_t level)
+{
+  ParseError_t err = peOk;
+
+  switch (level)
+  {
+  case plMaterial:
+    switch (Node)
+    {
+    case knMaterial:
+      MaterialList->Material.push_back(std::make_pair(value, new Material_t()));
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  default:
+    err = peInvalidLevel;
+    break;
+  }
+
+  return err;
 }
 
 Object3D::~Object3D()
