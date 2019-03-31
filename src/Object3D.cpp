@@ -55,14 +55,14 @@ Object3D::Object3D(const std::string & filename)
 Object3D::ParseError_t Object3D::ProcessLine(char* str)
 {
   ParseError_t lres = peOk;
-  std::map <std::string, DictStates_t>::const_iterator it;
+  std::map<std::string, DictStates_t>::const_iterator it;
   int index;
   char c;
 
   c = *str++;
   while (c && (lres == peOk))
   {
-    switch(PState)
+    switch (PState)
     {
     case psWaitKeyStart:
       if ((c != ' ') && (c != '\t') && (c != '\r') && (c != '\n') && (c != '*') && (c != '}'))
@@ -156,7 +156,7 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
       else
       {
         std::cout << "Open class" << std::endl;
-        switch(Node)
+        switch (Node)
         {
         case knScene:
           Level.push_back(plScene);
@@ -181,10 +181,13 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         if (c == '{')
         {
           std::cout << "Value: " << Value << std::endl;
-          switch(Node)
+          switch (Node)
           {
           case knMaterial:
             Level.push_back(plMaterial);
+            break;
+          case knSubMaterial:
+            Level.push_back(plSubMaterial);
             break;
           default:
             lres = peInvalidNode;
@@ -203,7 +206,6 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
       }
       break;
 
-
     case ps_Float:
     case ps_Float2:
     case ps_Float3:
@@ -212,15 +214,20 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
         std::cout << "Value (float" << PState << "): " << Value << std::endl;
 
         index = 0;
+        if (PState == ps_Float)
+          PState = psWaitKeyStart;
         switch (Level.back())
         {
         case plScene:
         case plMaterial:
+        case plSubMaterial:
           switch (Node)
           {
           case knSceneBkgStatic:
           case knSceneAmbientStatic:
           case knMaterialAmbient:
+          case knMaterialDiffuse:
+          case knMaterialSpecular:
             switch (PState)
             {
             case ps_Float3:
@@ -233,7 +240,6 @@ Object3D::ParseError_t Object3D::ProcessLine(char* str)
               break;
             case ps_Float:
               index = 2;
-              PState = psWaitKeyStart;
               break;
             default:
               break;
@@ -314,6 +320,17 @@ Object3D::ParseError_t Object3D::OnSetNum(int value, int index, KeyNodes_t node,
       break;
     }
     break;
+  case plMaterial:
+    switch (node)
+    {
+    case knMaterialSubMCount:
+      MaterialList->Material.back().second->SubMCount = value;
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
   default:
     err = peInvalidLevel;
     break;
@@ -350,6 +367,20 @@ Object3D::ParseError_t Object3D::OnSetStr(const std::string value, int index, Ke
     }
     break;
   case plMaterial:
+    switch (node)
+    {
+    case knMaterialName:
+      MaterialList->Material.back().second->Name = Value;
+      break;
+    case knMaterialClass:
+      MaterialList->Material.back().second->Class = Value;
+      break;
+    default:
+      err = peUnknownNode;
+      break;
+    }
+    break;
+  case plSubMaterial:
     switch (node)
     {
     case knMaterialName:
@@ -430,11 +461,115 @@ Object3D::ParseError_t Object3D::OnSetFloat(float value, int index, KeyNodes_t n
         break;
       }
       break;
+    case knMaterialDiffuse:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->Diffuse.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->Diffuse.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->Diffuse.R = value;
+        break;
+      }
+      break;
+    case knMaterialSpecular:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->Specular.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->Specular.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->Specular.R = value;
+        break;
+      }
+      break;
+    case knMaterialShine:
+      MaterialList->Material.back().second->Shine = value;
+      break;
+    case knMaterialShineStrength:
+      MaterialList->Material.back().second->ShineStrength = value;
+      break;
+    case knMaterialTransparency:
+      MaterialList->Material.back().second->Transparency = value;
+      break;
+    case knMaterialWiresize:
+      MaterialList->Material.back().second->Wiresize = value;
+      break;
     default:
       err = peInvalidNode;
       break;
     }
     break;
+
+  case plSubMaterial:
+    switch (node)
+    {
+    case knMaterialAmbient:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->SubMaterial.back().second->Ambient.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->SubMaterial.back().second->Ambient.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->SubMaterial.back().second->Ambient.R = value;
+        break;
+      }
+      break;
+    case knMaterialDiffuse:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->SubMaterial.back().second->Diffuse.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->SubMaterial.back().second->Diffuse.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->SubMaterial.back().second->Diffuse.R = value;
+        break;
+      }
+      break;
+    case knMaterialSpecular:
+      switch (index)
+      {
+      case 0:
+        MaterialList->Material.back().second->SubMaterial.back().second->Specular.B = value;
+        break;
+      case 1:
+        MaterialList->Material.back().second->SubMaterial.back().second->Specular.G = value;
+        break;
+      case 2:
+        MaterialList->Material.back().second->SubMaterial.back().second->Specular.R = value;
+        break;
+      }
+      break;
+    case knMaterialShine:
+      MaterialList->Material.back().second->SubMaterial.back().second->Shine = value;
+      break;
+    case knMaterialShineStrength:
+      MaterialList->Material.back().second->SubMaterial.back().second->ShineStrength = value;
+      break;
+    case knMaterialTransparency:
+      MaterialList->Material.back().second->SubMaterial.back().second->Transparency = value;
+      break;
+    case knMaterialWiresize:
+      MaterialList->Material.back().second->SubMaterial.back().second->Wiresize = value;
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+
   default:
     err = peInvalidLevel;
     break;
@@ -454,6 +589,17 @@ Object3D::ParseError_t Object3D::OnSetSubClassID(int value, KeyNodes_t node, Par
     {
     case knMaterial:
       MaterialList->Material.push_back(std::make_pair(value, new Material_t()));
+      break;
+    default:
+      err = peInvalidNode;
+      break;
+    }
+    break;
+  case plSubMaterial:
+    switch (Node)
+    {
+    case knSubMaterial:
+      MaterialList->Material.back().second->SubMaterial.push_back(std::make_pair(value, new SubMaterial_t()));
       break;
     default:
       err = peInvalidNode;

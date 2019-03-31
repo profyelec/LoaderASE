@@ -33,6 +33,8 @@ public:
   } AmbientStatic;
 };
 
+class SubMaterial_t;
+
 class Material_t
 {
 public:
@@ -44,7 +46,30 @@ public:
     float G;
     float B;
   } Ambient;
+  struct
+  {
+    float R;
+    float G;
+    float B;
+  } Diffuse;
+  struct
+  {
+    float R;
+    float G;
+    float B;
+  } Specular;
+  float Shine;
+  float ShineStrength;
+  float Transparency;
+  float Wiresize;
+  int SubMCount;
+  std::vector<std::pair<int, SubMaterial_t *>> SubMaterial;
+};
 
+class SubMaterial_t : public Material_t
+{
+public:
+  std::string Shading;
 };
 
 class MaterialList_t
@@ -76,11 +101,13 @@ private:
      knExportVer, knComment,
      knScene, knSceneFileName, knSceneFirstFrame, knSceneLastFrame, knSceneFrameSpeed, knSceneTicksPerFrame,
      knSceneBkgStatic, knSceneAmbientStatic,
-     knMaterialList, knMaterialCount, knMaterial, knMaterialName, knMaterialClass, knMaterialAmbient
+     knMaterialList, knMaterialCount, knMaterial, knMaterialName, knMaterialClass, knMaterialAmbient,
+     knMaterialDiffuse, knMaterialSpecular, knMaterialShine, knMaterialShineStrength, knMaterialTransparency, knMaterialWiresize,
+     knMaterialSubMCount, knSubMaterial
   } KeyNodes_t;
 
   typedef enum {
-    plRoot, plScene, plMaterialList, plMaterial
+    plRoot, plScene, plMaterialList, plMaterial, plSubMaterial
   }ParseLevel_t;
 
   typedef struct {
@@ -104,7 +131,15 @@ private:
       {"MATERIAL", {knMaterial, ps_SubClassId}},
       {"MATERIAL_NAME", {knMaterialName, ps_Str}},
       {"MATERIAL_CLASS", {knMaterialClass, ps_Str}},
-      {"MATERIAL_AMBIENT", {knMaterialAmbient, ps_Float3}}
+      {"MATERIAL_AMBIENT", {knMaterialAmbient, ps_Float3}},
+      {"MATERIAL_DIFFUSE", {knMaterialDiffuse, ps_Float3}},
+      {"MATERIAL_SPECULAR", {knMaterialSpecular, ps_Float3}},
+      {"MATERIAL_SHINE", {knMaterialShine, ps_Float}},
+      {"MATERIAL_SHINESTRENGTH", {knMaterialShineStrength, ps_Float}},
+      {"MATERIAL_TRANSPARENCY", {knMaterialTransparency, ps_Float}},
+      {"MATERIAL_WIRESIZE", {knMaterialWiresize, ps_Float}},
+      {"NUMSUBMTLS", {knMaterialSubMCount, ps_Num}},
+      {"SUBMATERIAL", {knSubMaterial, ps_SubClassId}}
   };
 
   std::list <ParseLevel_t> Level;
