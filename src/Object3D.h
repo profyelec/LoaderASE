@@ -10,6 +10,7 @@
 
 #include <string>
 #include <map>
+#include <list>
 
 class Object3D
 {
@@ -20,13 +21,20 @@ private:
     psWaitKeyStart, psGetKeyName, psValidateKey, psExportVer, psComment, psScene
   }ParseState_t;
 
+  typedef enum {
+    plBase, plScene
+
+  }ParseLevel_t;
+
   const std::map <std::string, ParseState_t> StateDict = {
       {"3DSMAX_ASCIIEXPORT", psExportVer},
       {"COMMENT", psComment},
       {"SCENE", psScene}
   };
 
+
   ParseState_t PState;
+  std::list <ParseLevel_t> Level;
   std::string KeyName;
 
 public:

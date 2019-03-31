@@ -15,6 +15,7 @@ Object3D::Object3D(char * filename)
   char lstr[1024];
 
   PState = psWaitKeyStart;
+  Level.push_back(plBase);
 
   while (!feof(f))
   {
@@ -63,12 +64,14 @@ int Object3D::ProcessLine(char* str)
       break;
     case psExportVer:
     case psComment:
-    case psScene:
       if ((c == '\r') || (c == '\n'))
       {
         PState = psWaitKeyStart;
         return 0;
       }
+      break;
+    case psScene:
+
       break;
     }
   }
