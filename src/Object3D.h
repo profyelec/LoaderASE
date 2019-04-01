@@ -33,7 +33,28 @@ public:
   } AmbientStatic;
 };
 
-class SubMaterial_t;
+class Map_t
+{
+public:
+  std::string Name;
+  std::string Class;
+  int SubNo;
+  float Amount;
+  std::string Bitmap;
+  std::string Type;
+//  *UVW_U_OFFSET 0.0000
+//  *UVW_V_OFFSET 0.0000
+//  *UVW_U_TILING 1.0000
+//  *UVW_V_TILING 1.0000
+//  *UVW_ANGLE 0.0000
+//  *UVW_BLUR 1.0000
+//  *UVW_BLUR_OFFSET 0.0000
+//  *UVW_NOUSE_AMT 1.0000
+//  *UVW_NOISE_SIZE 1.0000
+//  *UVW_NOISE_LEVEL 1
+//  *UVW_NOISE_PHASE 0.0000
+//  *BITMAP_FILTER Pyramidal
+};
 
 class Material_t
 {
@@ -62,15 +83,14 @@ public:
   float ShineStrength;
   float Transparency;
   float Wiresize;
-  int SubMCount;
-  std::vector<std::pair<int, SubMaterial_t *>> SubMaterial;
+  std::string Shading;
+  float XPFalloff;
+  float SelfIllum;
+  std::string Falloff;
+  std::string XPType;
+  Map_t * DiffuseMap;
 };
 
-class SubMaterial_t : public Material_t
-{
-public:
-  std::string Shading;
-};
 
 class MaterialList_t
 {
@@ -94,7 +114,7 @@ private:
   } ParseError_t;
 
   typedef enum {
-    psWaitKeyStart, psGetKeyName, psValidateKey, ps_Num, ps_Str, ps_SubClass, ps_Float3, ps_Float2, ps_Float, ps_SubClassId
+    psWaitKeyStart, psGetKeyName, psValidateKey, ps_Num, ps_Str, ps_SubClass, ps_Float3, ps_Float2, ps_Float, ps_SubClassId, ps_Enum
   }ParseState_t;
 
   typedef enum {
@@ -103,11 +123,13 @@ private:
      knSceneBkgStatic, knSceneAmbientStatic,
      knMaterialList, knMaterialCount, knMaterial, knMaterialName, knMaterialClass, knMaterialAmbient,
      knMaterialDiffuse, knMaterialSpecular, knMaterialShine, knMaterialShineStrength, knMaterialTransparency, knMaterialWiresize,
-     knMaterialSubMCount, knSubMaterial
+     knMaterialShading, knMaterialXPFalloff, knMaterialSelfIllum, knMaterialFalloff,
+     knMaterialXPType,
+     knMapDiffuse, knMapName, knMapClass, knMapSubNo, knMapAmount, knMapBitmap
   } KeyNodes_t;
 
   typedef enum {
-    plRoot, plScene, plMaterialList, plMaterial, plSubMaterial
+    plRoot, plScene, plMaterialList, plMaterial, plMapDiffuse
   }ParseLevel_t;
 
   typedef struct {
@@ -138,8 +160,18 @@ private:
       {"MATERIAL_SHINESTRENGTH", {knMaterialShineStrength, ps_Float}},
       {"MATERIAL_TRANSPARENCY", {knMaterialTransparency, ps_Float}},
       {"MATERIAL_WIRESIZE", {knMaterialWiresize, ps_Float}},
-      {"NUMSUBMTLS", {knMaterialSubMCount, ps_Num}},
-      {"SUBMATERIAL", {knSubMaterial, ps_SubClassId}}
+      {"MATERIAL_SHADING", {knMaterialShading, ps_Enum}},
+      {"MATERIAL_XP_FALLOFF", {knMaterialXPFalloff, ps_Float}},
+      {"MATERIAL_SELFILLUM", {knMaterialSelfIllum, ps_Float}},
+      {"MATERIAL_FALLOFF", {knMaterialFalloff, ps_Enum}},
+      {"MATERIAL_XP_TYPE", {knMaterialXPType, ps_Enum}},
+      {"MAP_DIFFUSE", {knMapDiffuse, ps_SubClass}},
+      {"MAP_NAME", {knMapName, ps_Str}},
+      {"MAP_CLASS", {knMapClass, ps_Str}},
+      {"MAP_SUBNO", {knMapSubNo, ps_Num}},
+      {"MAP_AMOUNT", {knMapAmount, ps_Float}},
+      {"BITMAP", {knMapBitmap, ps_Str}},
+
   };
 
   std::list <ParseLevel_t> Level;
@@ -153,6 +185,7 @@ private:
   ParseError_t OnSetStr(const std::string value, int index, KeyNodes_t node, ParseLevel_t level);
   ParseError_t OnSetFloat(float value, int index, KeyNodes_t node, ParseLevel_t level);
   ParseError_t OnSetSubClassID(int value, KeyNodes_t node, ParseLevel_t level);
+  ParseError_t OnSetEnum(const std::string value, int index, KeyNodes_t node, ParseLevel_t level);
 
 
 public:
