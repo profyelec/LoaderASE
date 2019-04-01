@@ -42,18 +42,18 @@ public:
   float Amount;
   std::string Bitmap;
   std::string Type;
-//  *UVW_U_OFFSET 0.0000
-//  *UVW_V_OFFSET 0.0000
-//  *UVW_U_TILING 1.0000
-//  *UVW_V_TILING 1.0000
-//  *UVW_ANGLE 0.0000
-//  *UVW_BLUR 1.0000
-//  *UVW_BLUR_OFFSET 0.0000
-//  *UVW_NOUSE_AMT 1.0000
-//  *UVW_NOISE_SIZE 1.0000
-//  *UVW_NOISE_LEVEL 1
-//  *UVW_NOISE_PHASE 0.0000
-//  *BITMAP_FILTER Pyramidal
+  float UVW_U_offset;
+  float UVW_V_offset;
+  float UVW_U_tiling;
+  float UVW_V_tiling;
+  float UVW_Angle;
+  float UVW_Blur;
+  float UVW_Blur_Offset;
+  float UVW_Nouse_AMT;
+  float UVW_Noise_size;
+  float UVW_Noise_level;
+  float UVW_Noise_phase;
+  std::string BitmapFilter;
 };
 
 class Material_t
@@ -125,7 +125,9 @@ private:
      knMaterialDiffuse, knMaterialSpecular, knMaterialShine, knMaterialShineStrength, knMaterialTransparency, knMaterialWiresize,
      knMaterialShading, knMaterialXPFalloff, knMaterialSelfIllum, knMaterialFalloff,
      knMaterialXPType,
-     knMapDiffuse, knMapName, knMapClass, knMapSubNo, knMapAmount, knMapBitmap
+     knMapDiffuse, knMapName, knMapClass, knMapSubNo, knMapAmount, knMapBitmap, knMapType,
+     knMapUVW_UO, knMapUVW_VO, knMapUVW_UT, knMapUVW_VT, knMapUVW_Angle, knMapUVW_Blur, knMapUVW_Blur_Offset,
+     knMapUVW_Nouse_AMT, knMapUVW_Noise_size, knMapUVW_Noise_level, knMapUVW_Noise_phase, knMapBitmapFilter
   } KeyNodes_t;
 
   typedef enum {
@@ -171,6 +173,19 @@ private:
       {"MAP_SUBNO", {knMapSubNo, ps_Num}},
       {"MAP_AMOUNT", {knMapAmount, ps_Float}},
       {"BITMAP", {knMapBitmap, ps_Str}},
+      {"MAP_TYPE", {knMapType, ps_Enum}},
+      {"UVW_U_OFFSET", {knMapUVW_UO, ps_Float}},
+      {"UVW_V_OFFSET", {knMapUVW_VO, ps_Float}},
+      {"UVW_U_TILING", {knMapUVW_UT, ps_Float}},
+      {"UVW_V_TILING", {knMapUVW_VT, ps_Float}},
+      {"UVW_ANGLE", {knMapUVW_Angle, ps_Float}},
+      {"UVW_BLUR", {knMapUVW_Blur, ps_Float}},
+      {"UVW_BLUR_OFFSET", {knMapUVW_Blur_Offset,ps_Float}},
+      {"UVW_NOUSE_AMT", {knMapUVW_Nouse_AMT, ps_Float}},
+      {"UVW_NOISE_SIZE", {knMapUVW_Noise_size, ps_Float}},
+      {"UVW_NOISE_LEVEL", {knMapUVW_Noise_level, ps_Float}},
+      {"UVW_NOISE_PHASE", {knMapUVW_Noise_phase, ps_Float}},
+      {"BITMAP_FILTER", {knMapBitmapFilter, ps_Enum}}
 
   };
 

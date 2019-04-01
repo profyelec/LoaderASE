@@ -550,6 +550,41 @@ Object3D::ParseError_t Object3D::OnSetFloat(float value, int index, KeyNodes_t n
     case knMapAmount:
       MaterialList->Material.back().second->DiffuseMap->Amount = value;
       break;
+    case knMapUVW_UO:
+      MaterialList->Material.back().second->DiffuseMap->UVW_U_offset = value;
+      break;
+    case knMapUVW_VO:
+      MaterialList->Material.back().second->DiffuseMap->UVW_V_offset = value;
+      break;
+    case knMapUVW_UT:
+      MaterialList->Material.back().second->DiffuseMap->UVW_U_tiling = value;
+      break;
+    case knMapUVW_VT:
+      MaterialList->Material.back().second->DiffuseMap->UVW_V_tiling = value;
+      break;
+    case knMapUVW_Angle:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Angle = value;
+      break;
+    case knMapUVW_Blur:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Blur = value;
+      break;
+    case knMapUVW_Blur_Offset:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Blur_Offset = value;
+      break;
+    case knMapUVW_Nouse_AMT:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Nouse_AMT = value;
+      break;
+    case knMapUVW_Noise_size:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Noise_size = value;
+      break;
+    case knMapUVW_Noise_level:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Noise_level = value;
+      break;
+    case knMapUVW_Noise_phase:
+      MaterialList->Material.back().second->DiffuseMap->UVW_Noise_phase = value;
+      break;
+
+
     default:
       err = peInvalidNode;
       break;
@@ -599,13 +634,27 @@ Object3D::ParseError_t Object3D::OnSetEnum(const std::string value, int index, K
     switch (node)
     {
     case knMaterialShading:
-      MaterialList->Material.back().second->Shading = Value;
+      MaterialList->Material.back().second->Shading = value;
       break;
     case knMaterialFalloff:
-      MaterialList->Material.back().second->Falloff = Value;
+      MaterialList->Material.back().second->Falloff = value;
       break;
     case knMaterialXPType:
-      MaterialList->Material.back().second->XPType = Value;
+      MaterialList->Material.back().second->XPType = value;
+      break;
+    default:
+      err = peUnknownNode;
+      break;
+    }
+    break;
+  case plMapDiffuse:
+    switch (node)
+    {
+    case knMapType:
+      MaterialList->Material.back().second->DiffuseMap->Type = value;
+      break;
+    case knMapBitmapFilter:
+      MaterialList->Material.back().second->DiffuseMap->BitmapFilter = value;
       break;
     default:
       err = peUnknownNode;
